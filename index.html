@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>保費計算器</title>
+    <script>
+        function updatePaymentOptions() {
+            const age = parseInt(document.getElementById("age").value);
+            const duration = parseInt(document.getElementById("duration").value);
+            const paymentDuration = document.getElementById("payment_duration");
+
+            // 清除付款年限選項
+            paymentDuration.innerHTML = "";
+
+            if (isNaN(age) || isNaN(duration)) {
+                return;
+            }
+
+            // 確保年齡 + 保險時長 < 85
+            if (age + duration >= 85) {
+                alert("年齡加上保險時長必須小於85年");
+                document.getElementById("duration").value = "";
+                return;
+            }
+
+            // 動態生成付款年限選項，付款年限必須 <= 保險時長
+            for (let i = 1; i <= duration; i++) {
+                const option = document.createElement("option");
+                option.value = i;
+                option.textContent = i + " 年";
+                paymentDuration.appendChild(option);
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>保費計算器</h1>
+
+    <h2>新增資料</h2>
+    <!-- 上傳 Excel 的表單 -->
+    <form method="post" enctype="multipart/form-data">
+        <label for="file_upload">上傳 LifeTable Excel 檔案:</label>
+        <input type="file" id="file_upload" name="file_upload" accept=".xlsx" required><br><br>
+        <button type="submit" name="upload_excel">上傳 Excel</button>
+    </form>
+
+    <hr>
+
+    <!-- 刪除資料表 -->
+    <h2>刪除資料表</h2>
+    <form method="post">
+        <label for="table_to_delete">選擇要刪除的資料表:</label>
+        <select id="table_to_delete" name="table_to_delete" required>
+            {% for table in tables %}
+                <option value="{{ table }}">{{ table }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" name="delete_table">刪除</button>
+    </form>
+
+    <hr>
+
+    <!-- 修改死亡機率 -->
+    <h2>修改死亡機率</h2>
+    <form method="post">
+        <!-- 選擇資料表 -->
+        <label for="edit_table_name">選擇 LifeTable 資料表:</label>
+        <select id="edit_table_name" name="edit_table_name" required>
+            {% for table in tables %}
+                <option value="{{ table }}">{{ table }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <!-- 輸入年齡 -->
+        <label for="edit_age">輸入年齡 (20-84):</label>
+        <input type="number" id="edit_age" name="edit_age" required min="20" max="84"><br><br>
+
+        <!-- 輸入新的死亡機率 -->
+        <label for="new_mortality_rate">輸入新的死亡機率(0~1):</label>
+        <input type="number" id="new_mortality_rate" name="new_mortality_rate" required step="0.000000001" min="0" max="1"><br><br>
+
+        <button type="submit" name="update_mortality_rate">確認修改</button>
+    </form>
+
+
+    <hr>
+
+    <!-- 計算保費的表單 -->
+    <h2>計算保費</h2>
+    <form method="post">
+        <!-- 選擇資料表 -->
+        <label for="table_name">選擇 LifeTable 資料表:</label>
+        <select id="table_name" name="table_name" required>
+            {% for table in tables %}
+                <option value="{{ table }}">{{ table }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <!-- 年齡 -->
+        <label for="age">輸入年齡:</label>
+        <input type="number" id="age" name="age" required min="20" max="65" onchange="updatePaymentOptions()"><br><br>
+
+        <!-- 保險時長 -->
+        <label for="duration">選擇保險時長:</label>
+        <input type="number" id="duration" name="duration" required min="1" onchange="updatePaymentOptions()"><br><br>
+
+        <!-- 付款年限 -->
+        <label for="payment_duration">選擇付款年限:</label>
+        <select id="payment_duration" name="payment_duration" required>
+            <!-- 動態生成選項 -->
+        </select><br><br>
+
+        <!-- 受保金額 -->
+        <label for="insurance_amount">輸入預計受保金額 (T):</label>
+        <input type="number" id="insurance_amount" name="insurance_amount" required min="1" step="0.01"><br><br>
+
+        <button type="submit" name="calculate_premium">計算保費</button>
+    </form>
+
+    {% if total_premium is not none %}
+        <h2>
+            {% if request.form['payment_duration'] == '1' %}
+                總保費為: {{ total_premium }} 元
+            {% else %}
+                單次保費為: {{ total_premium }} 元
+            {% endif %}
+        </h2>
+        <small>
+            <p>您輸入的資料：</p>
+            <p>您選擇的資料表：{{ request.form['table_name'] }}</p>
+            <p>年齡：{{ request.form['age'] }} 歲</p>
+            <p>保險時長：{{ request.form['duration'] }} 年</p>
+            <p>付款年限：{{ request.form['payment_duration'] }} 年</p>
+            <p>受保金額 (T)：{{ request.form['insurance_amount'] }} 元</p>
+        </small>
+    {% elif request.method == 'POST' %}
+        <h2>無法計算保費，請檢查輸入的資料。</h2>
+    {% endif %}
+</body>
+</html>
